@@ -1,14 +1,9 @@
-import bcrypt from "bcrypt";
 import prisma from "@/lib/db";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
     try {
-        const { userName, password, firstName, lastName, bio, dob, gender, image } = await req.json();
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         const session = await auth();
 
         if (!session) {
@@ -17,25 +12,25 @@ export async function POST(req: Request) {
                 { status: 200 }
             );
         }
+        const { username } = await req.json();
 
         // update the user's profile
-        const updatedUser = await prisma.user.update({
+        const foundUser = await prisma.user.findUnique({
             where: {
-                id: session?.user?.id
+                name: username
             },
-            data: {
-                name: userName,
-                firstName,
-                lastName,
-                bio,
-                gender,
-                dateOfBirth: new Date(dob),
-                profilePicture: image,
-            }
+        })
+
+
+        // update the user's profile
+        const foundPosts = await prisma.post.findMany({
+            where: {
+                userId: foundUser?.id
+            },
         })
 
         return NextResponse.json(
-            { success: "Profile Updated!" },
+            { success: "Posts Found!", user: foundUser, posts: foundPosts },
             { status: 200 }
         );
     } catch (e) {
